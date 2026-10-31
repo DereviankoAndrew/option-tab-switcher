@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Option-Tab Switcher</title>
+<meta name="description" content="Switch Chrome tabs with ⌥ Tab exactly like ⌘ Tab switches apps on macOS — same keys, same most-recently-used order. Free and open source.">
+<meta property="og:title" content="Option-Tab Switcher — ⌘Tab for your Chrome tabs">
+<meta property="og:description" content="Hold ⌥, tap Tab. The macOS app switcher you already know, for Chrome tabs.">
+<meta property="og:image" content="https://dereviankoandrew.github.io/option-tab-switcher/assets/screenshot.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --surface-2: #eef0f6;
+    --text: #15161a;
+    --muted: #5d6170;
+    --line: rgba(20, 22, 30, 0.1);
+    --accent: #5b6cff;
+    --accent-2: #7b4dff;
+    --accent-ink: #ffffff;
+    --key-bg: linear-gradient(#ffffff, #eceef4);
+    --key-edge: #c9ccd6;
+    --chrome-bar: #e3e6ee;
+    --chrome-tab: #f2f4f8;
+    --sw-bg: rgba(236, 236, 236, 0.74);
+    --sw-fg: #1d1d1f;
+    --sw-sel: rgba(0, 0, 0, 0.11);
+    --sw-edge: rgba(0, 0, 0, 0.12);
+    --shadow: 0 30px 80px -20px rgba(30, 35, 80, 0.35);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d0e12;
+      --surface: #16181e;
+      --surface-2: #1d2029;
+      --text: #f2f3f7;
+      --muted: #9a9fb0;
+      --line: rgba(255, 255, 255, 0.1);
+      --accent: #7c8aff;
+      --accent-2: #9a74ff;
+      --key-bg: linear-gradient(#2b2e38, #22242c);
+      --key-edge: #3a3e4b;
+      --chrome-bar: #23262f;
+      --chrome-tab: #2c303a;
+      --sw-bg: rgba(38, 38, 40, 0.66);
+      --sw-fg: #f5f5f7;
+      --sw-sel: rgba(255, 255, 255, 0.17);
+      --sw-edge: rgba(255, 255, 255, 0.2);
+      --shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0e12;
+    --surface: #16181e;
+    --surface-2: #1d2029;
+    --text: #f2f3f7;
+    --muted: #9a9fb0;
+    --line: rgba(255, 255, 255, 0.1);
+    --accent: #7c8aff;
+    --accent-2: #9a74ff;
+    --key-bg: linear-gradient(#2b2e38, #22242c);
+    --key-edge: #3a3e4b;
+    --chrome-bar: #23262f;
+    --chrome-tab: #2c303a;
+    --sw-bg: rgba(38, 38, 40, 0.66);
+    --sw-fg: #f5f5f7;
+    --sw-sel: rgba(255, 255, 255, 0.17);
+    --sw-edge: rgba(255, 255, 255, 0.2);
+    --shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .container { padding: 0 32px; } }
+
+  /* nav */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; color: var(--text); }
+  .brand img { width: 28px; height: 28px; }
+  .brand:hover { text-decoration: none; }
+  .nav-links { display: flex; gap: 20px; font-size: 15px; }
+  .nav-links a { color: var(--muted); }
+  .nav-links a:hover { color: var(--text); text-decoration: none; }
+  @media (max-width: 560px) { .nav-links .hide-sm { display: none; } }
+
+  /* hero */
+  .hero { text-align: center; padding: 56px 0 40px; position: relative; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40px 0 auto; height: 420px; z-index: -1;
+    background: radial-gradient(600px 260px at 50% 30%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+  }
+  .hero-icon { width: 88px; height: 88px; filter: drop-shadow(0 12px 24px rgba(91, 108, 255, 0.35)); }
+  h1 {
+    font-size: clamp(36px, 7vw, 64px); line-height: 1.05; letter-spacing: -0.035em;
+    margin: 22px 0 18px; font-weight: 750;
+  }
+  h1 .grad {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede { font-size: clamp(17px, 2.3vw, 20px); color: var(--muted); max-width: 640px; margin: 0 auto; }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 15px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); box-shadow: 0 8px 24px -10px rgba(0,0,0,.3); }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); border-color: transparent; }
+  .btn svg { width: 18px; height: 18px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--muted); }
+
+  kbd, .kbd {
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    min-width: 1.9em; padding: 1px 7px; border-radius: 6px;
+    font: 600 0.85em/1.6 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--key-bg); border: 1px solid var(--key-edge);
+    box-shadow: 0 1px 0 var(--key-edge); color: var(--text); white-space: nowrap;
+  }
+
+  /* demo */
+  section { padding: 56px 0; }
+  .section-head { text-align: center; max-width: 640px; margin: 0 auto 32px; }
+  .eyebrow { font-size: 13px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  h2 { font-size: clamp(28px, 4.4vw, 40px); letter-spacing: -0.025em; line-height: 1.15; margin: 8px 0 12px; }
+  .section-head p { color: var(--muted); margin: 0; }
+
+  .browser {
+    border-radius: 14px; overflow: hidden; background: var(--surface);
+    border: 1px solid var(--line); box-shadow: var(--shadow);
+    max-width: 960px; margin: 0 auto;
+  }
+  .chrome-bar { background: var(--chrome-bar); padding: 10px 12px 0; display: flex; align-items: flex-end; gap: 10px; }
+  .lights { display: flex; gap: 7px; padding: 0 6px 12px; flex: none; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+  .lights i:nth-child(2) { background: #febc2e; }
+  .lights i:nth-child(3) { background: #28c840; }
+  .tabstrip { display: flex; gap: 2px; min-width: 0; flex: 1; overflow: hidden; }
+  .tabstrip button {
+    all: unset; cursor: pointer; display: flex; align-items: center; gap: 7px;
+    flex: 1 1 0; min-width: 0; max-width: 200px; padding: 8px 12px; border-radius: 9px 9px 0 0;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .tabstrip button:hover { background: color-mix(in srgb, var(--chrome-tab) 60%, transparent); }
+  .tabstrip button.on { background: var(--surface); color: var(--text); }
+  .tabstrip button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fav {
+    flex: none; width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center;
+    color: #fff; font-size: 10px; font-weight: 700;
+  }
+  .urlbar { padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .urlbar div {
+    background: var(--surface-2); border-radius: 999px; padding: 6px 14px; font-size: 13px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .viewport { position: relative; height: 420px; overflow: hidden; }
+  @media (max-width: 560px) { .viewport { height: 360px; } }
+  .page { padding: 32px; height: 100%; }
+  @media (max-width: 560px) { .page { padding: 20px; } }
+  .page-hero { height: 120px; border-radius: 14px; margin-bottom: 22px; display: flex; align-items: flex-end; padding: 18px; color: #fff; }
+  .page-hero h3 { margin: 0; font-size: 24px; letter-spacing: -0.02em; }
+  .bars i { display: block; height: 11px; border-radius: 6px; background: var(--surface-2); margin: 0 0 12px; }
+
+  /* the switcher (mirrors the extension's own styling) */
+  .sw-wrap {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; padding: 12px;
+  }
+  .sw {
+    pointer-events: auto; max-width: 100%; padding: 14px; border-radius: 28px;
+    background: var(--sw-bg); color: var(--sw-fg);
+    backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+    box-shadow: 0 0 0 0.5px var(--sw-edge), 0 24px 70px rgba(0, 0, 0, 0.35);
+    user-select: none; cursor: default;
+  }
+  .sw-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+  .sw-tile {
+    width: 96px; padding: 10px 6px 8px; border-radius: 18px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  @media (max-width: 560px) { .sw-tile { width: 76px; } .sw-icon { width: 44px !important; height: 44px !important; font-size: 20px !important; } }
+  .sw-tile.sel { background: var(--sw-sel); }
+  .sw-icon {
+    width: 56px; height: 56px; border-radius: 22%; display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 25px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  }
+  .sw-name {
+    width: 100%; font-size: 11px; text-align: center; opacity: .85; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3;
+  }
+  .sw-label { margin-top: 10px; text-align: center; }
+  .sw-label b { display: block; font-size: 13px; }
+  .sw-label small { font-size: 11px; opacity: .6; }
+
+  .controls {
+    max-width: 960px; margin: 22px auto 0; display: flex; flex-wrap: wrap; gap: 16px;
+    align-items: center; justify-content: space-between;
+  }
+  .keys { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .keycap {
+    all: unset; cursor: pointer; min-width: 54px; height: 46px; padding: 0 14px; border-radius: 10px;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--key-bg); border: 1px solid var(--key-edge); box-shadow: 0 3px 0 var(--key-edge);
+    font-weight: 650; font-size: 15px; color: var(--text); transition: transform .06s, box-shadow .06s;
+  }
+  .keycap small { font-size: 10px; font-weight: 500; color: var(--muted); line-height: 1; }
+  .keycap.down, .keycap:active { transform: translateY(3px); box-shadow: 0 0 0 var(--key-edge); }
+  .keycap.latched { outline: 2px solid var(--accent); outline-offset: 2px; transform: translateY(3px); box-shadow: none; }
+  .keycap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { font-size: 14px; color: var(--muted); }
+  .mru { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .mru .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 4px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line); color: var(--text);
+    transition: transform .25s ease;
+  }
+  .mru .chip .fav { width: 14px; height: 14px; font-size: 9px; }
+
+  /* features */
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px;
+  }
+  .card .ic {
+    width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 14px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent);
+  }
+  .card .ic svg { width: 22px; height: 22px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  /* shortcuts */
+  .shortcuts { max-width: 760px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .shortcut { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 22px; border-top: 1px solid var(--line); }
+  .shortcut:first-child { border-top: 0; }
+  .shortcut span:first-child { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .shortcut span:last-child { color: var(--muted); text-align: right; font-size: 15px; }
+  @media (max-width: 560px) {
+    .shortcut { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px; }
+    .shortcut span:last-child { text-align: left; }
+  }
+
+  /* install */
+  .steps { counter-reset: s; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .step { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+  .step::before {
+    content: counter(s); display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; font-size: 14px; margin-bottom: 14px;
+  }
+  .step h3 { margin: 0 0 6px; font-size: 16px; }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+  code { font: 0.88em ui-monospace, "SF Mono", Menlo, monospace; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; overflow-wrap: anywhere; }
+
+  /* faq */
+  .faq { max-width: 760px; margin: 0 auto; }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; padding: 14px 0; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--muted); font-weight: 400; font-size: 20px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { margin: 0 0 16px; color: var(--muted); }
+
+  footer { padding: 40px 0 56px; text-align: center; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); margin-top: 40px; }
+
+  /* preview mode: used to render the README screenshot */
+  body.preview > *:not(main), body.preview main > *:not(#demo), body.preview #demo .section-head, body.preview .controls { display: none; }
+  body.preview #demo { padding: 40px 32px; }
+  body.preview .hero::before { display: none; }
+</style>
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <a class="brand" href="./"><img src="assets/icon.svg" alt="">Option-Tab Switcher</a>
+      <div class="nav-links">
+        <a href="#demo" class="hide-sm">Demo</a>
+        <a href="#install" class="hide-sm">Install</a>
+        <a href="#faq" class="hide-sm">FAQ</a>
+        <a href="https://github.com/DereviankoAndrew/option-tab-switcher">GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container hero">
+      <img class="hero-icon" src="assets/icon.svg" alt="">
+      <h1>⌘Tab, but for your<br><span class="grad">Chrome tabs.</span></h1>
+      <p class="lede">Hold <kbd>⌥</kbd> and tap <kbd>Tab</kbd>. You get the macOS app switcher you already know, for Chrome tabs. It uses the same keys and the same most-recently-used order, so it works from muscle memory.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/DereviankoAndrew/option-tab-switcher/releases/latest/download/option-tab-switcher.zip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+          Download for Chrome
+        </a>
+        <a class="btn" href="https://github.com/DereviankoAndrew/option-tab-switcher">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+      <p class="meta">Free &amp; open source · No tracking, nothing leaves your browser · Chrome 104+ on macOS</p>
+    </div>
+
+    <section id="demo">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Try it right here</div>
+          <h2>Hold <kbd>⌥</kbd>, press <kbd>Tab</kbd>.</h2>
+          <p>This is a live demo. Use your keyboard, or the keys below the window. Click tabs in the strip to change the order and see how the most-recently-used list follows you.</p>
+        </div>
+
+        <div class="browser" id="browser">
+          <div class="chrome-bar">
+            <div class="lights"><i></i><i></i><i></i></div>
+            <div class="tabstrip" id="tabstrip"></div>
+          </div>
+          <div class="urlbar"><div id="url"></div></div>
+          <div class="viewport" id="viewport">
+            <div class="page" id="page"></div>
+            <div class="sw-wrap" id="switcher" hidden></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="keys">
+            <button class="keycap" id="key-opt" aria-pressed="false">⌥<small>option</small></button>
+            <button class="keycap" id="key-tab">⇥<small>tab</small></button>
+            <button class="keycap" id="key-esc">esc</button>
+            <span class="hint" id="hint">Click ⌥ to hold it, then press Tab.</span>
+          </div>
+          <div class="mru" id="mru" aria-label="Most recently used order"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Why it feels right</div>
+          <h2>Built around how you actually switch.</h2>
+          <p>Ctrl+Tab goes through tabs from left to right. You usually want the tab you were just on. ⌘Tab got that right years ago.</p>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></div>
+            <h3>A quick tap takes you back</h3>
+            <p>A quick tap of ⌥ Tab flips between your two latest tabs. Released quickly, it switches without the switcher flashing on screen.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="5" height="10" rx="1.5"/><rect x="9.5" y="7" width="5" height="10" rx="1.5"/><rect x="16" y="7" width="5" height="10" rx="1.5"/></svg></div>
+            <h3>Hold to browse</h3>
+            <p>Keep ⌥ down and the switcher shows up. Tab moves right, ⇧ Tab or ` moves left, and letting go switches.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="13" height="10" rx="2"/><rect x="9" y="10" width="13" height="10" rx="2"/></svg></div>
+            <h3>Works across all windows</h3>
+            <p>The list covers tabs in every Chrome window. Picking a tab in another window brings that window to the front, just like ⌘Tab with apps.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+            <h3>Close tabs from the switcher</h3>
+            <p>Press Q or W while the switcher is open to close the selected tab, the same way ⌘Tab + Q quits an app.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
+            <h3>Looks like macOS</h3>
+            <p>A frosted-glass panel that follows light and dark mode. It's rendered in an isolated shadow DOM, so websites can't break its styling.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h3>Private by design</h3>
+            <p>No servers, analytics or accounts. The tab order lives in your browser's session memory and nowhere else.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="shortcuts">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Shortcuts</div>
+          <h2>Same keys you already use.</h2>
+        </div>
+        <div class="shortcuts">
+          <div class="shortcut"><span><kbd>⌥</kbd><kbd>Tab</kbd> quick tap</span><span>Go back to the previous tab</span></div>
+          <div class="shortcut"><span>Hold <kbd>⌥</kbd>, press <kbd>Tab</kbd></span><span>Open the switcher, move right</span></div>
+          <div class="shortcut"><span><kbd>⌥</kbd><kbd>⇧</kbd><kbd>Tab</kbd> · <kbd>⌥</kbd><kbd>`</kbd> · <kbd>←</kbd></span><span>Move left</span></div>
+          <div class="shortcut"><span><kbd>→</kbd></span><span>Move right</span></div>
+          <div class="shortcut"><span>Release <kbd>⌥</kbd> · <kbd>Enter</kbd></span><span>Switch to the selected tab</span></div>
+          <div class="shortcut"><span><kbd>Esc</kbd></span><span>Cancel</span></div>
+          <div class="shortcut"><span><kbd>Q</kbd> · <kbd>W</kbd></span><span>Close the selected tab</span></div>
+          <div class="shortcut"><span>Hover · Click</span><span>Select / switch with the mouse</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Install</div>
+          <h2>Up and running in a minute.</h2>
+          <p>Until it's on the Chrome Web Store, you install it as an unpacked extension.</p>
+        </div>
+        <div class="steps">
+          <div class="step"><h3>Download</h3><p>Get <a href="https://github.com/DereviankoAndrew/option-tab-switcher/releases/latest/download/option-tab-switcher.zip">option-tab-switcher.zip</a> and unzip it somewhere permanent.</p></div>
+          <div class="step"><h3>Open extensions</h3><p>Go to <code>chrome://extensions</code> in Chrome.</p></div>
+          <div class="step"><h3>Developer mode</h3><p>Turn on <b>Developer mode</b> in the top-right corner.</p></div>
+          <div class="step"><h3>Load unpacked</h3><p>Click <b>Load unpacked</b> and choose the unzipped folder. Then try <kbd>⌥</kbd><kbd>Tab</kbd>.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">FAQ</div>
+          <h2>Questions &amp; limits</h2>
+        </div>
+        <div class="faq">
+          <details>
+            <summary>Why doesn't ⌥ Tab work on the New Tab page or chrome:// pages?</summary>
+            <p>Chrome's shortcut API doesn't accept <code>Tab</code> as a key and can't detect when you let go of a modifier. Both are needed for ⌘Tab-style switching, so the extension catches the keys inside the web page instead. Chrome doesn't let extensions run on its own pages: the New Tab page, <code>chrome://</code> pages and the Web Store. For those, you can bind a fallback "switch to previous tab" shortcut at <code>chrome://extensions/shortcuts</code>.</p>
+          </details>
+          <details>
+            <summary>It doesn't react when I'm typing in the address bar.</summary>
+            <p>Same reason: the address bar and DevTools belong to Chrome itself, not the page. Click into the page or press <kbd>Esc</kbd> first.</p>
+          </details>
+          <details>
+            <summary>What permissions does it need, and why?</summary>
+            <p><b>tabs</b> to list and switch tabs, <b>storage</b> to remember the order while the background worker sleeps, <b>favicon</b> to show site icons, and <b>scripting</b> plus access to all sites to listen for ⌥ Tab on every page. Nothing is sent anywhere.</p>
+          </details>
+          <details>
+            <summary>Does it work on Windows or Linux?</summary>
+            <p>It's built for macOS. On Windows and most Linux desktops, Alt+Tab is taken by the operating system before Chrome ever sees it.</p>
+          </details>
+          <details>
+            <summary>Another app already uses ⌥ Tab (e.g. a window switcher).</summary>
+            <p>Apps that grab ⌥ Tab system-wide get it first. Change the shortcut in that app, or use the fallback command.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      Made by <a href="https://github.com/DereviankoAndrew">Andrii Derevianko</a> · <a href="https://github.com/DereviankoAndrew/option-tab-switcher/blob/main/LICENSE">MIT License</a> · Not affiliated with Apple or Google.
+    </div>
+  </footer>
+
+<script>
+(() => {
+  const TABS = [
+    { title: 'Inbox — 3 unread', host: 'mail.example.com', color: '#e5534b', letter: 'M', blurb: 'Three new messages are waiting.' },
+    { title: 'Q4 roadmap', host: 'docs.example.com', color: '#3b82f6', letter: 'D', blurb: 'Planning doc: goals, milestones and owners.' },
+    { title: 'Fix tab ordering #42', host: 'code.example.com', color: '#6e40c9', letter: 'C', blurb: 'Pull request · 2 approvals · checks passing.' },
+    { title: 'Flights to Lisbon', host: 'travel.example.com', color: '#0e9f9a', letter: 'T', blurb: 'Round trip · 2 adults · Nov 14 – Nov 21.' },
+    { title: 'Weeknight pasta', host: 'recipes.example.com', color: '#e8890c', letter: 'R', blurb: '25 minutes · serves 4 · one pot.' },
+    { title: 'Lo-fi beats to code to', host: 'music.example.com', color: '#db2777', letter: '♪', blurb: 'Now playing · 2h 14m playlist.' },
+  ];
+  let mru = [1, 0, 2, 5, 3, 4];
+
+  const $ = (id) => document.getElementById(id);
+  const tabstrip = $('tabstrip'), page = $('page'), url = $('url'), swEl = $('switcher'),
+        mruEl = $('mru'), hint = $('hint'), keyOpt = $('key-opt'), keyTab = $('key-tab'), keyEsc = $('key-esc');
+
+  const fav = (t) => `<span class="fav" style="background:${t.color}">${t.letter}</span>`;
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function activate(i) {
+    mru = [i, ...mru.filter((x) => x !== i)];
+    renderBrowser();
+  }
+
+  function renderBrowser() {
+    const cur = TABS[mru[0]];
+    tabstrip.innerHTML = TABS.map((t, i) =>
+      `<button data-i="${i}" class="${i === mru[0] ? 'on' : ''}">${fav(t)}<span>${esc(t.title)}</span></button>`).join('');
+    url.textContent = `https://${cur.host}/`;
+    const widths = [92, 78, 85, 64, 88, 55, 72];
+    page.innerHTML = `<div class="page-hero" style="background:linear-gradient(135deg, ${cur.color}, color-mix(in srgb, ${cur.color} 55%, #000))">
+        <div><h3>${esc(cur.title)}</h3><div style="opacity:.85;font-size:14px">${esc(cur.blurb)}</div></div></div>
+      <div class="bars">${widths.map((w, k) => `<i style="width:${(w + mru[0] * 7 + k * 3) % 50 + 45}%"></i>`).join('')}</div>`;
+    mruEl.innerHTML = '<span>Recently used:</span>' +
+      mru.map((i) => `<span class="chip">${fav(TABS[i])}${esc(TABS[i].title.split(' ')[0])}</span>`).join('');
+  }
+
+  tabstrip.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) activate(Number(b.dataset.i));
+  });
+
+  // ---- switcher: same state machine as the extension
+  const SHOW_DELAY_MS = 150;
+  let active = false, index = 0, shown = false, timer = 0, order = [];
+  const wrap = (i) => ((i % order.length) + order.length) % order.length;
+
+  function start(back) {
+    active = true; shown = false; order = mru.slice();
+    index = wrap(back ? -1 : 1);
+    timer = setTimeout(() => { shown = true; render(); }, SHOW_DELAY_MS);
+  }
+  function step(d) { index = wrap(index + d); render(); }
+  function end() { active = false; shown = false; clearTimeout(timer); swEl.hidden = true; }
+  function commit() {
+    if (!active) return;
+    const pick = order[index];
+    end();
+    if (index !== 0) activate(pick);
+  }
+  function closeSelected() {
+    if (order.length <= 1) return;
+    hint.textContent = 'In the extension, Q / W closes the selected tab. The demo keeps them all open.';
+  }
+  function render() {
+    if (!active || !shown) return;
+    swEl.hidden = false;
+    const t = TABS[order[index]];
+    swEl.innerHTML = `<div class="sw" role="listbox"><div class="sw-row">${order.map((i, k) =>
+      `<div class="sw-tile${k === index ? ' sel' : ''}" data-k="${k}"><div class="sw-icon" style="background:${TABS[i].color}">${TABS[i].letter}</div><div class="sw-name">${esc(TABS[i].title)}</div></div>`
+    ).join('')}</div><div class="sw-label"><b>${esc(t.title)}</b><small>${t.host}</small></div></div>`;
+  }
+  swEl.addEventListener('mousemove', (e) => {
+    const tile = e.target.closest('.sw-tile');
+    if (tile && Number(tile.dataset.k) !== index) { index = Number(tile.dataset.k); render(); }
+  });
+  swEl.addEventListener('click', (e) => {
+    const tile = e.target.closest('.sw-tile');
+    if (tile) { index = Number(tile.dataset.k); commit(); setLatched(false); }
+  });
+
+  // ---- real keyboard
+  function press(el) { el.classList.add('down'); setTimeout(() => el.classList.remove('down'), 140); }
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Tab' && e.altKey && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      press(keyTab);
+      keyOpt.classList.add('down');
+      active ? step(e.shiftKey ? -1 : 1) : start(e.shiftKey);
+      return;
+    }
+    if (!active) return;
+    if (!e.altKey && !latched) { commit(); return; }
+    e.preventDefault();
+    switch (e.code) {
+      case 'Escape': end(); press(keyEsc); break;
+      case 'ArrowRight': step(1); break;
+      case 'ArrowLeft': case 'Backquote': step(-1); break;
+      case 'Enter': commit(); setLatched(false); break;
+      case 'KeyQ': case 'KeyW': closeSelected(); break;
+    }
+  }, true);
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'Alt') {
+      keyOpt.classList.remove('down');
+      if (!latched) commit();
+    }
+  }, true);
+  window.addEventListener('blur', () => { if (!latched) end(); keyOpt.classList.remove('down'); });
+
+  // ---- on-screen keys (⌥ latches, since you can't hold a key and click at once)
+  let latched = false;
+  function setLatched(v) {
+    latched = v;
+    keyOpt.classList.toggle('latched', v);
+    keyOpt.setAttribute('aria-pressed', String(v));
+    hint.textContent = v ? 'Holding ⌥. Press Tab to move, then click ⌥ again to let go.' : 'Click ⌥ to hold it, then press Tab.';
+  }
+  keyOpt.addEventListener('click', () => {
+    if (latched) { setLatched(false); commit(); }
+    else setLatched(true);
+  });
+  keyTab.addEventListener('click', () => {
+    if (!latched) {
+      hint.textContent = 'Hold ⌥ first. Tab on its own just moves focus, same as on a Mac.';
+      return;
+    }
+    active ? step(1) : start(false);
+  });
+  keyEsc.addEventListener('click', () => { if (active) end(); });
+
+  renderBrowser();
+
+  // ?preview renders just the demo with the switcher open (used for the README screenshot)
+  if (new URLSearchParams(location.search).has('preview')) {
+    document.body.classList.add('preview');
+    start(false);
+    clearTimeout(timer);
+    shown = true;
+    step(1);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Option-Tab Switcher",
+  "version": "1.0.0",
+  "description": "Switch Chrome tabs with ⌥ Tab exactly like ⌘ Tab switches apps on macOS, in most-recently-used order.",
+  "minimum_chrome_version": "104",
+  "homepage_url": "https://dereviankoandrew.github.io/option-tab-switcher/",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Option-Tab Switcher — hold ⌥ and press Tab",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "permissions": ["tabs", "storage", "scripting", "favicon"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_origin_as_fallback": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["_favicon/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "switch-to-previous-tab": {
+      "description": "Switch to the previously used tab (fallback for pages where ⌥ Tab can't be captured, e.g. the New Tab page)"
+    }
+  }
+}
